@@ -148,6 +148,19 @@ flowchart LR
   Q -.adaptador.-> IS
 ```
 
+### Modelo de datos
+
+**No hay base de datos:** usuarios, sesiones e inspecciones se guardan en memoria detrás de puertos de
+salida, y se pierden al reiniciar. El diagrama [`docs/modelo-datos.drawio`](docs/modelo-datos.drawio)
+tiene dos páginas:
+
+1. **Actual (en memoria):** `User`, `AuthToken`, `InspectionRecord` y el adaptador que guarda cada uno.
+2. **Propuesto (PostgreSQL):** tablas `usuario`, `sesion`, `carga_archivo`, `inspeccion` y `error_carga`,
+   con llaves, restricciones y a qué puerto corresponde cada tabla. Es una propuesta; no está implementada.
+
+Se abre en [app.diagrams.net](https://app.diagrams.net) (*Archivo → Abrir*) o con la extensión
+*Draw.io Integration* de VS Code.
+
 ### Decisiones de diseño
 
 - **Dominio y aplicación sin Spring.** Los servicios son clases Java puras; se ensamblan en
