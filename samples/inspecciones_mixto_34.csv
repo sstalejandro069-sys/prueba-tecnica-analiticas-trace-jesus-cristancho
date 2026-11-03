@@ -1,0 +1,35 @@
+ID,Fecha,Ubicacion,Estado,Inspector,Observaciones
+INS-201,2026-10-01,Frente Norte,Aprobado,Carlos Rojas,Válido
+INS-202,2026-10-01,Frente Sur,Rechazado,Laura Gómez,Válido
+INS-203,2026-13-01,Frente Norte,Aprobado,Carlos Rojas,ERROR: mes 13 no existe
+INS-204,2026-10-02,Planta Principal,Pendiente,Andrés Pérez,Válido
+INS-205,2026-10-02,,Aprobado,Diana Torres,ERROR: ubicación vacía
+INS-206,2026-10-03,Pozo 7,Aprobada,Diana Torres,ERROR: estado mal escrito
+INS-207,07/10/2026,Estación Compresora,Aprobado,Andrés Pérez,Válido: fecha DD/MM/AAAA
+INS-208,2026-10-04,Frente Sur,pendiente,Laura Gómez,Válido: estado en minúscula
+INS-202,2026-10-04,Frente Norte,Aprobado,Carlos Rojas,ERROR: ID duplicado
+INS-210,2026-10-05,Planta Principal,Aprobado,Diana Torres,Válido
+,2026-10-05,Pozo 7,Rechazado,Diana Torres,ERROR: ID vacío
+INS-212,ayer,Frente Norte,Aprobado,Carlos Rojas,ERROR: fecha no es una fecha
+INS-213,2026-10-06,Frente Sur,Aprobado,Laura Gómez,Válido
+INS-214,2026-10-06,Planta Principal,,Andrés Pérez,ERROR: estado vacío
+INS-215,2026-10-07,Estación Compresora,Rechazado,Andrés Pérez,Válido
+INS-216,2026-10-07,Frente Norte,RECHAZADO,Carlos Rojas,Válido: estado en mayúscula
+INS-217,29/02/2026,Pozo 7,Aprobado,Diana Torres,ERROR: 2026 no es bisiesto
+INS-218,2026-10-08,Frente Sur,Aprobado,Laura Gómez,Válido
+INS-219,2026-10-08,Frente Norte,Pendiente,Carlos Rojas,Válido
+INS-220,2026-10-09,Planta Principal,En revisión,Andrés Pérez,ERROR: estado no permitido
+INS-221,2026-10-09,Pozo 7,Aprobado,Diana Torres,Válido
+INS-222,2026-10-10,Frente Norte,Rechazado,Carlos Rojas,Válido
+INS-223,,,Aprobado,Laura Gómez,ERROR doble: fecha y ubicación vacías
+INS-224,2026-10-11,Estación Compresora,Aprobado,Andrés Pérez,Válido
+INS-225,2026-10-11,Frente Sur,Pendiente,Laura Gómez,Válido
+INS-226,2026-10-12,Frente Norte,Rechazado,Carlos Rojas,"Válido: observación con coma, entre comillas"
+INS-227,2026/10/12,Planta Principal,Aprobado,Diana Torres,ERROR: formato de fecha AAAA/MM/DD
+INS-228,2026-10-13,Pozo 7,Aprobado,Diana Torres,Válido
+INS-229,2026-10-13,Frente Norte,Aprobado,Carlos Rojas,Válido
+INS-230,2026-10-14,Frente Sur,Rechazado,Laura Gómez,Válido
+INS-231,2026-10-14,Estación Compresora,Pendiente,Andrés Pérez,Válido
+INS-213,2026-10-15,Frente Norte,Aprobado,Carlos Rojas,ERROR: ID duplicado
+INS-233,2026-10-15,Planta Principal,Aprobado,Andrés Pérez,Válido
+INS-234,2026-10-16,Frente Norte, Aprobado ,Carlos Rojas,Válido: espacios alrededor del estado
