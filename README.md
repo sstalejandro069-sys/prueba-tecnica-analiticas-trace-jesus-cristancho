@@ -12,6 +12,22 @@ tabla de control, gráficas y análisis descriptivo generado automáticamente.
 | Frontend | HTML + CSS + JavaScript (módulos ES nativos, sin framework) · Chart.js |
 | Pruebas | JUnit 5 · AssertJ · MockMvc |
 
+## Credenciales de acceso
+
+| Usuario | Contraseña | Uso |
+|---|---|---|
+| `admin` | `admin123` | Login de la aplicación web y de la API (`POST /api/auth/login`) |
+
+- Son **credenciales simuladas** para el prototipo. Se definen en
+  [`application.properties`](src/main/resources/application.properties)
+  (`trace.auth.default-username` / `trace.auth.default-password`) y se pueden sobrescribir al arrancar:
+  `--trace.auth.default-password=otraClave`.
+- Al iniciar, la contraseña se guarda **con hash BCrypt** en memoria; nunca se compara en texto plano.
+- El login devuelve un **token Bearer válido por 60 minutos** (`trace.auth.token-ttl-minutes`).
+  Todas las rutas `/api/**` lo exigen, salvo `/api/auth/login`.
+- En Swagger UI: ejecute `POST /api/auth/login`, copie el `token` y péguelo en el botón **Authorize**.
+- Las sesiones y los datos cargados viven en memoria: **al reiniciar la aplicación se pierden**.
+
 ## Cómo ejecutarlo
 
 Requisito: **JDK 21** (`java -version`). Maven no hace falta; lo descarga `mvnw`.
@@ -26,7 +42,7 @@ Requisito: **JDK 21** (`java -version`). Maven no hace falta; lo descarga `mvnw`
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Especificación OpenAPI | http://localhost:8080/v3/api-docs (copia versionada en [`docs/openapi.yaml`](docs/openapi.yaml)) |
 
-Credenciales de demostración: **admin / admin123** (configurables en `application.properties`).
+Ingrese con **admin / admin123** (ver [Credenciales de acceso](#credenciales-de-acceso)).
 
 Pruebas:
 
@@ -41,6 +57,36 @@ Pruebas:
 | `inspecciones.csv` / `inspecciones.xlsx` | Carga correcta de 20 registros |
 | `inspecciones_con_errores.csv` | Separador `;`, encabezado con tilde, y 4 filas inválidas que se descartan y reportan (fecha imposible, campo vacío, estado mal escrito, ID duplicado) |
 | `inspecciones_esquema_invalido.csv` | Rechazo del archivo completo por columnas faltantes (HTTP 422) |
+| `inspecciones_mixto_34.csv` | 34 registros: 22 válidos y 12 inválidos (13 errores; una fila tiene dos). La columna *Observaciones* explica qué prueba cada fila |
+
+**La carga no se detiene en el primer error.** Se validan todas las filas, se cargan las válidas y al
+final se devuelven todos los errores juntos, con fila, columna y motivo. Solo se rechaza el archivo
+completo si faltan columnas obligatorias o si ninguna fila es válida.
+
+### API con `curl`
+
+```bash
+# 1. Login: guarda el token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | sed 's/.*"token":"\([^"]*\)".*/\1/')
+
+# 2. Cargar un archivo
+curl -X POST http://localhost:8080/api/inspections/upload \
+  -H "Authorization: Bearer $TOKEN" -F "file=@samples/inspecciones_mixto_34.csv"
+
+# 3. Consultar registros y analítica
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/inspections
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/analytics
+```
+
+| Método | Ruta | Token | Descripción |
+|---|---|---|---|
+| POST | `/api/auth/login` | No | Devuelve `{token, username, expiresAt}` |
+| POST | `/api/auth/logout` | Sí | Invalida el token |
+| POST | `/api/inspections/upload` | Sí | `multipart/form-data`, campo `file` (.csv / .xlsx, máx. 5 MB) |
+| GET | `/api/inspections` | Sí | Registros válidos de la última carga |
+| GET | `/api/analytics` | Sí | Distribuciones, periodo, resumen y hallazgos |
 
 ### Esquema esperado del archivo
 
@@ -118,6 +164,95 @@ flowchart LR
 - **Carga parcial.** Si las columnas son correctas, las filas válidas se cargan y las inválidas se
   reportan con fila, columna y motivo. Si faltan columnas o ninguna fila es válida, se rechaza el archivo.
 - **Reloj inyectable (`Clock`)** para probar la expiración de sesiones.
+
+## Guía para entender el código
+
+### Cómo leer un módulo
+
+Cada funcionalidad se lee de adentro hacia afuera:
+
+| Capa | Paquete | Qué contiene | Depende de |
+|---|---|---|---|
+| Dominio | `<funcionalidad>/domain` | Modelos y reglas de negocio en Java puro | Nada |
+| Aplicación | `<funcionalidad>/application/port/in` | Casos de uso que ofrece el módulo (interfaces) | Dominio |
+| | `<funcionalidad>/application/port/out` | Lo que el módulo necesita del exterior (interfaces) | Dominio |
+| | `<funcionalidad>/application/service` | Implementa los casos de uso usando los puertos de salida | Dominio, puertos |
+| Infraestructura | `<funcionalidad>/infrastructure/in/web` | Controladores REST y DTOs (adaptadores de entrada) | Puertos de entrada |
+| | `<funcionalidad>/infrastructure/out` | Memoria, BCrypt, CSV, Excel (adaptadores de salida) | Puertos de salida |
+| | `<funcionalidad>/infrastructure/config` | Crea los servicios como beans de Spring | Todo lo anterior |
+
+Orden de lectura recomendado: 1) `shared/domain/DomainException`, 2) `auth`, 3) `ingestion`,
+4) `analytics`, 5) `shared/error/GlobalExceptionHandler`, 6) el frontend en `static/js/pages/dashboard.js`.
+
+### Recorrido de una petición
+
+**Login** — `POST /api/auth/login`
+
+1. [`AuthController`](src/main/java/co/analiticas/trace/auth/infrastructure/in/web/AuthController.java)
+   valida el JSON (`@NotBlank`) y crea `Credentials`.
+2. [`AuthService.login`](src/main/java/co/analiticas/trace/auth/application/service/AuthService.java)
+   busca el usuario (`UserRepositoryPort`), compara el hash (`PasswordHasherPort`) y guarda un
+   `AuthToken` con expiración (`TokenStorePort`).
+3. Si falla, lanza `InvalidCredentialsException` → `GlobalExceptionHandler` responde 401.
+
+**Petición protegida** — cualquier `/api/**`
+
+1. [`AuthInterceptor`](src/main/java/co/analiticas/trace/auth/infrastructure/in/web/AuthInterceptor.java)
+   (registrado en [`WebConfig`](src/main/java/co/analiticas/trace/shared/config/WebConfig.java))
+   lee el encabezado `Authorization: Bearer ...` y llama a `ValidateTokenUseCase`.
+2. Si el token no existe o expiró, se lanza `UnauthorizedException` → 401, y el frontend redirige al login.
+
+**Carga de archivo** — `POST /api/inspections/upload`
+
+1. [`InspectionController`](src/main/java/co/analiticas/trace/ingestion/infrastructure/in/web/InspectionController.java)
+   recibe el `MultipartFile` y crea un `UploadFileCommand`.
+2. [`IngestionService.upload`](src/main/java/co/analiticas/trace/ingestion/application/service/IngestionService.java)
+   comprueba que no esté vacío y elige el parser según la extensión (`FileParserPort.supports`).
+3. [`CsvFileParser`](src/main/java/co/analiticas/trace/ingestion/infrastructure/out/CsvFileParser.java) o
+   [`XlsxFileParser`](src/main/java/co/analiticas/trace/ingestion/infrastructure/out/XlsxFileParser.java)
+   solo leen el formato y devuelven una `RawTable` (encabezados + filas de texto).
+4. [`InspectionFileSchema.validate`](src/main/java/co/analiticas/trace/ingestion/domain/InspectionFileSchema.java)
+   aplica las reglas: columnas obligatorias, fechas, estados, IDs únicos. Acumula los errores sin detenerse.
+5. El servicio reemplaza los datos en `InspectionRepositoryPort` y el controlador responde `UploadResponse`.
+
+**Analítica** — `GET /api/analytics`
+
+1. [`AnalyticsService`](src/main/java/co/analiticas/trace/analytics/application/service/AnalyticsService.java)
+   pide los datos a `InspectionQueryPort`.
+2. [`IngestionInspectionQueryAdapter`](src/main/java/co/analiticas/trace/analytics/infrastructure/out/IngestionInspectionQueryAdapter.java)
+   los obtiene de la ingesta y los traduce a `InspectionFact` (el modelo propio de la analítica).
+3. [`AnalyticsCalculator`](src/main/java/co/analiticas/trace/analytics/domain/AnalyticsCalculator.java)
+   cuenta por estado y ubicación, y
+   [`InsightGenerator`](src/main/java/co/analiticas/trace/analytics/domain/InsightGenerator.java)
+   redacta el resumen y los hallazgos.
+
+**En el navegador** — [`dashboard.js`](src/main/resources/static/js/pages/dashboard.js)
+
+1. Verifica la sesión (`session.require()`), crea el `store` y los componentes.
+2. `uploader.js` valida extensión y tamaño, llama a `api.uploadFile` y muestra el resultado o los errores.
+3. Tras la carga, `refresh()` pide `/api/inspections` y `/api/analytics`, actualiza el `store` y este
+   notifica a la tabla, las gráficas, los KPIs y el resumen.
+
+### Cómo extenderlo
+
+| Necesidad | Qué hacer | Qué no cambia |
+|---|---|---|
+| Nuevo formato (`.json`, `.xls`) | Una clase `@Component` que implemente `FileParserPort` | Dominio, servicio, controlador |
+| Base de datos real | Un adaptador JPA que implemente `InspectionRepositoryPort` | Dominio, servicio |
+| Usuarios reales (BD, LDAP) | Un adaptador que implemente `UserRepositoryPort` | `AuthService`, controlador |
+| Nueva columna obligatoria | Agregarla en `InspectionFileSchema` e `InspectionRecord` | Parsers |
+| Nuevo hallazgo automático | Una regla en `InsightGenerator.insights()` | Controladores, frontend |
+| Nuevo error HTTP | Una excepción que extienda `DomainException` y su estado en `GlobalExceptionHandler` | Formato `ApiError` |
+
+### Dónde están las pruebas
+
+| Prueba | Qué cubre |
+|---|---|
+| `auth/application/service/AuthServiceTest` | Login, clave errada, usuario inexistente, expiración y logout (con reloj controlado) |
+| `ingestion/domain/InspectionFileSchemaTest` | Reglas del esquema: encabezados, errores por fila, archivo sin filas válidas |
+| `ingestion/infrastructure/out/FileParsersTest` | CSV con comas/`;`/BOM/comillas, Excel con fechas, archivos dañados |
+| `analytics/domain/AnalyticsCalculatorTest` | Resumen, porcentajes, empates, alerta de rechazos, datos vacíos |
+| `AnaliticasTraceApplicationTests` | Integración de punta a punta con MockMvc, incluida la documentación OpenAPI |
 
 ### Manejo de errores
 
