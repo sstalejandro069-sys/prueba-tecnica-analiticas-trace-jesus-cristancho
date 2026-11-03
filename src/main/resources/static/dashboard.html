@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel · Analíticas Trace</title>
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <a class="brand" href="/"><span class="brand-mark">AT</span> Analíticas Trace</a>
+      <div class="topbar-user">
+        <span class="username">Sesión: <strong id="current-user"></strong></span>
+        <button class="btn btn-ghost" id="logout-btn" type="button">Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <div class="container grid">
+      <div class="page-title">
+        <h1>Panel de inspecciones</h1>
+        <p class="muted">Cargue un reporte para ver la tabla de control, las gráficas y el análisis automático.</p>
+      </div>
+
+      <section class="card" aria-labelledby="upload-title">
+        <div class="card-header">
+          <h2 id="upload-title">Cargar reporte</h2>
+          <span class="muted">Columnas: ID, Fecha, Ubicacion, Estado · opcionales: Inspector, Observaciones</span>
+        </div>
+        <label class="dropzone" id="dropzone">
+          <span class="dropzone-icon" aria-hidden="true">📄</span>
+          <span><strong>Seleccione un archivo</strong> o arrástrelo aquí</span>
+          <span class="muted" id="dropzone-hint">Formatos .csv o .xlsx · máximo 5 MB</span>
+          <input class="sr-only" type="file" id="file-input" accept=".csv,.xlsx">
+        </label>
+        <div class="upload-feedback" id="upload-feedback" aria-live="polite"></div>
+      </section>
+
+      <section class="card empty-state" id="empty-state">
+        <h2>Aún no hay datos cargados</h2>
+        <p class="muted">Use el archivo de ejemplo <code>samples/inspecciones.csv</code> del repositorio para probar.</p>
+      </section>
+
+      <div class="grid hidden" id="results">
+        <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+        <section class="card" aria-labelledby="summary-title">
+          <div class="card-header"><h2 id="summary-title">Análisis descriptivo</h2></div>
+          <div id="summary"></div>
+        </section>
+
+        <div class="grid grid-2">
+          <section class="card" aria-labelledby="chart-status-title">
+            <div class="card-header"><h2 id="chart-status-title">Inspecciones por estado</h2></div>
+            <div class="chart-box"><canvas id="chart-status" role="img" aria-label="Gráfica de inspecciones por estado"></canvas></div>
+          </section>
+          <section class="card" aria-labelledby="chart-location-title">
+            <div class="card-header"><h2 id="chart-location-title">Inspecciones por ubicación</h2></div>
+            <div class="chart-box"><canvas id="chart-location" role="img" aria-label="Gráfica de inspecciones por ubicación"></canvas></div>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="table-title">
+          <div class="card-header">
+            <h2 id="table-title">Tabla de control</h2>
+            <span class="muted" id="table-count"></span>
+          </div>
+          <div id="data-table"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/pages/dashboard.js"></script>
+</body>
+</html>

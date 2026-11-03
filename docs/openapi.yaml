@@ -1,0 +1,368 @@
+openapi: 3.1.0
+info:
+  title: Analíticas Trace API
+  description: |-
+    API del prototipo Analíticas Trace: autenticación simulada, ingesta de reportes
+    de inspección (.csv / .xlsx) y analítica descriptiva.
+
+    **Flujo de prueba:** 1) `POST /api/auth/login` con admin / admin123,
+    2) botón *Authorize* con el token, 3) `POST /api/inspections/upload`,
+    4) `GET /api/analytics`.
+  contact:
+    name: Analíticas S.A.S
+    email: contacto@analiticassas.com
+  version: 1.0.0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+security:
+- bearerAuth: []
+tags:
+- name: Analítica
+  description: Métricas descriptivas y resumen automático
+- name: Autenticación
+  description: Inicio y cierre de sesión con credenciales simuladas
+- name: Ingesta
+  description: Carga de reportes de inspección (.csv / .xlsx) y consulta de registros
+paths:
+  /api/inspections/upload:
+    post:
+      tags:
+      - Ingesta
+      summary: Cargar reporte de inspecciones
+      description: |-
+        Columnas obligatorias: ID, Fecha, Ubicacion, Estado. Opcionales: Inspector, Observaciones.
+        Fecha en formato AAAA-MM-DD o DD/MM/AAAA. Estado: Aprobado, Rechazado o Pendiente.
+        Las filas válidas reemplazan la carga anterior; las inválidas se reportan en 'errors'.
+      operationId: upload
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Archivo .csv o .xlsx
+              required:
+              - file
+      responses:
+        "200":
+          description: Archivo procesado (puede incluir filas descartadas)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          description: "Archivo vacío, dañado o de tipo no soportado"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Token ausente o inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "413":
+          description: El archivo supera los 5 MB
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Faltan columnas obligatorias o ninguna fila es válida
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/auth/logout:
+    post:
+      tags:
+      - Autenticación
+      summary: Cerrar sesión
+      description: Invalida el token actual.
+      operationId: logout
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Sesión cerrada
+        "401":
+          description: Token ausente o inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/auth/login:
+    post:
+      tags:
+      - Autenticación
+      summary: Iniciar sesión
+      description: "Valida usuario y contraseña y devuelve un token Bearer. Credenciales\
+        \ por defecto: admin / admin123."
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Campos vacíos
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Usuario o contraseña incorrectos
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+      security: []
+  /api/inspections:
+    get:
+      tags:
+      - Ingesta
+      summary: Listar inspecciones
+      description: Registros válidos de la última carga.
+      operationId: list
+      responses:
+        "200":
+          description: Lista de registros (vacía si no se ha cargado archivo)
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InspectionResponse"
+        "401":
+          description: Token ausente o inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/analytics:
+    get:
+      tags:
+      - Analítica
+      summary: Obtener analítica
+      description: "Distribución por estado y ubicación, periodo analizado, resumen\
+        \ y hallazgos automáticos."
+      operationId: get
+      responses:
+        "200":
+          description: Reporte (totalRecords = 0 si no hay datos cargados)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AnalyticsResponse"
+        "401":
+          description: Token ausente o inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiError"
+components:
+  schemas:
+    ApiError:
+      type: object
+      description: Formato común de error de la API
+      properties:
+        status:
+          type: integer
+          format: int32
+          example: 422
+        code:
+          type: string
+          description: Código estable para el cliente
+          example: INVALID_FILE_CONTENT
+        message:
+          type: string
+          example: "El archivo no cumple con el esquema esperado: faltan columnas\
+            \ obligatorias."
+        details:
+          type: array
+          description: "Detalle adicional (columnas faltantes, errores por fila, campos\
+            \ inválidos)"
+          example:
+          - "Columnas faltantes: Estado"
+          items:
+            type: string
+        path:
+          type: string
+          example: /api/inspections/upload
+        timestamp:
+          type: string
+          format: date-time
+    RowErrorResponse:
+      type: object
+      description: Error de validación de una fila
+      properties:
+        row:
+          type: integer
+          format: int32
+          description: Fila en el archivo (el encabezado es la fila 1)
+          example: 5
+        column:
+          type: string
+          example: Estado
+        message:
+          type: string
+          example: Estado no reconocido 'Aprobada'
+    UploadResponse:
+      type: object
+      description: Resultado de la carga. Las filas inválidas se descartan y se reportan
+        en 'errors'.
+      properties:
+        fileName:
+          type: string
+          example: inspecciones.csv
+        totalRows:
+          type: integer
+          format: int32
+          description: Filas de datos leídas
+          example: 20
+        validRows:
+          type: integer
+          format: int32
+          description: Filas cargadas
+          example: 18
+        invalidRows:
+          type: integer
+          format: int32
+          description: Filas descartadas
+          example: 2
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/RowErrorResponse"
+    LoginRequest:
+      type: object
+      description: Credenciales de acceso
+      properties:
+        username:
+          type: string
+          description: Nombre de usuario
+          example: admin
+          minLength: 1
+        password:
+          type: string
+          description: Contraseña
+          example: admin123
+          minLength: 1
+      required:
+      - password
+      - username
+    LoginResponse:
+      type: object
+      description: Sesión creada tras un login exitoso
+      properties:
+        token:
+          type: string
+          description: Token Bearer para las demás peticiones
+          example: 3f1c2b7e-9a1d-4c55-8e0b-2f6a7d9c1e44
+        username:
+          type: string
+          example: admin
+        expiresAt:
+          type: string
+          format: date-time
+          description: Fecha de expiración del token (UTC)
+    InspectionResponse:
+      type: object
+      description: Registro de inspección válido
+      properties:
+        id:
+          type: string
+          example: INS-001
+        date:
+          type: string
+          format: date
+          example: 2026-10-01
+        location:
+          type: string
+          example: Frente Norte
+        status:
+          type: string
+          enum:
+          - Aprobado
+          - Rechazado
+          - Pendiente
+          example: Aprobado
+        inspector:
+          type: string
+          example: Carlos Rojas
+        observations:
+          type: string
+          example: Sin novedades
+    AnalyticsResponse:
+      type: object
+      description: Métricas descriptivas y hallazgos automáticos de la última carga
+      properties:
+        totalRecords:
+          type: integer
+          format: int32
+          example: 4
+        byStatus:
+          type: array
+          description: "Distribución por estado, de mayor a menor"
+          items:
+            $ref: "#/components/schemas/CategoryResponse"
+        byLocation:
+          type: array
+          description: "Distribución por ubicación, de mayor a menor"
+          items:
+            $ref: "#/components/schemas/CategoryResponse"
+        firstDate:
+          type: string
+          format: date
+          example: 2026-10-01
+        lastDate:
+          type: string
+          format: date
+          example: 2026-10-15
+        summary:
+          type: string
+          example: "Se procesaron 4 registros: el 50% se encuentra en estado Aprobado,\
+            \ siendo Frente Norte la zona con mayor actividad."
+        insights:
+          type: array
+          description: Hallazgos adicionales generados por reglas
+          items:
+            type: string
+    CategoryResponse:
+      type: object
+      description: Conteo de una categoría
+      properties:
+        label:
+          type: string
+          example: Aprobado
+        count:
+          type: integer
+          format: int64
+          example: 2
+        percentage:
+          type: number
+          format: double
+          description: Porcentaje sobre el total (1 decimal)
+          example: 50.0
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Token obtenido en /api/auth/login
+      scheme: bearer

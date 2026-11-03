@@ -1,0 +1,8 @@
+ID;Fecha;Ubicación;Estado;Inspector;Observaciones
+INS-101;2026-10-01;Frente Norte;Aprobado;Carlos Rojas;Sin novedades
+INS-102;31/02/2026;Frente Sur;Aprobado;Laura Gómez;Fecha inexistente
+INS-103;2026-10-02;;Rechazado;Andrés Pérez;Sin ubicación
+INS-104;2026-10-02;Planta Principal;Aprobada;Diana Torres;Estado mal escrito
+INS-101;2026-10-03;Frente Norte;Pendiente;Carlos Rojas;ID repetido
+INS-105;05/10/2026;Pozo 7;Rechazado;Diana Torres;Fecha en formato DD/MM/AAAA (válida)
+INS-106;2026-10-06;Frente Sur;pendiente;Laura Gómez;Estado en minúscula (válido)

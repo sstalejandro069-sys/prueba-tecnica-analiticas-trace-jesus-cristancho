@@ -1,0 +1,21 @@
+ID,Fecha,Ubicacion,Estado,Inspector,Observaciones
+INS-001,2026-10-01,Frente Norte,Aprobado,Carlos Rojas,Sin novedades
+INS-002,2026-10-01,Frente Sur,Rechazado,Laura Gómez,Fuga menor en válvula de alivio
+INS-003,2026-10-02,Frente Norte,Aprobado,Carlos Rojas,Señalización completa
+INS-004,2026-10-02,Planta Principal,Pendiente,Andrés Pérez,Falta registro fotográfico
+INS-005,2026-10-03,Frente Norte,Aprobado,Laura Gómez,Sin novedades
+INS-006,2026-10-03,Pozo 7,Rechazado,Diana Torres,Extintor vencido
+INS-007,2026-10-04,Estación Compresora,Aprobado,Andrés Pérez,Lecturas dentro de rango
+INS-008,2026-10-04,Frente Sur,Aprobado,Laura Gómez,Corrección de fuga verificada
+INS-009,2026-10-05,Frente Norte,Pendiente,Carlos Rojas,En espera de firma del supervisor
+INS-010,2026-10-06,Planta Principal,Aprobado,Diana Torres,Sin novedades
+INS-011,2026-10-06,Pozo 7,Aprobado,Diana Torres,Extintor reemplazado
+INS-012,2026-10-07,Frente Norte,Rechazado,Carlos Rojas,"Andamio sin certificación, se suspende la actividad"
+INS-013,2026-10-08,Estación Compresora,Pendiente,Andrés Pérez,Revisión de vibraciones programada
+INS-014,2026-10-08,Frente Sur,Aprobado,Laura Gómez,Sin novedades
+INS-015,2026-10-09,Frente Norte,Aprobado,Carlos Rojas,Sin novedades
+INS-016,2026-10-10,Planta Principal,Rechazado,Andrés Pérez,Tablero eléctrico sin bloqueo
+INS-017,2026-10-11,Pozo 7,Pendiente,Diana Torres,Pendiente análisis de gases
+INS-018,2026-10-12,Frente Norte,Aprobado,Laura Gómez,Sin novedades
+INS-019,2026-10-13,Estación Compresora,Aprobado,Andrés Pérez,Mantenimiento preventivo al día
+INS-020,2026-10-15,Frente Sur,Aprobado,Carlos Rojas,Sin novedades
